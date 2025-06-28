@@ -3,39 +3,41 @@ import { XIcon } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { webhookServiceClient } from "@/grpcweb";
+import useCurrentUser from "@/hooks/useCurrentUser";
 import useLoading from "@/hooks/useLoading";
 import { useTranslate } from "@/utils/i18n";
 import { generateDialog } from "./Dialog";
 
 interface Props extends DialogProps {
-  webhookId?: number;
+  webhookName?: string;
   onConfirm: () => void;
 }
 
 interface State {
-  name: string;
+  displayName: string;
   url: string;
 }
 
 const CreateWebhookDialog: React.FC<Props> = (props: Props) => {
-  const { webhookId, destroy, onConfirm } = props;
+  const { webhookName, destroy, onConfirm } = props;
   const t = useTranslate();
+  const currentUser = useCurrentUser();
   const [state, setState] = useState({
-    name: "",
+    displayName: "",
     url: "",
   });
   const requestState = useLoading(false);
-  const isCreating = webhookId === undefined;
+  const isCreating = webhookName === undefined;
 
   useEffect(() => {
-    if (webhookId) {
+    if (webhookName) {
       webhookServiceClient
         .getWebhook({
-          id: webhookId,
+          name: webhookName,
         })
         .then((webhook) => {
           setState({
-            name: webhook.name,
+            displayName: webhook.displayName,
             url: webhook.url,
           });
         });
@@ -51,7 +53,7 @@ const CreateWebhookDialog: React.FC<Props> = (props: Props) => {
 
   const handleTitleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPartialState({
-      name: e.target.value,
+      displayName: e.target.value,
     });
   };
 
@@ -62,25 +64,33 @@ const CreateWebhookDialog: React.FC<Props> = (props: Props) => {
   };
 
   const handleSaveBtnClick = async () => {
-    if (!state.name || !state.url) {
+    if (!state.displayName || !state.url) {
       toast.error(t("message.fill-all-required-fields"));
+      return;
+    }
+
+    if (!currentUser) {
+      toast.error("User not authenticated");
       return;
     }
 
     try {
       if (isCreating) {
         await webhookServiceClient.createWebhook({
-          name: state.name,
-          url: state.url,
+          parent: currentUser.name,
+          webhook: {
+            displayName: state.displayName,
+            url: state.url,
+          },
         });
       } else {
         await webhookServiceClient.updateWebhook({
           webhook: {
-            id: webhookId,
-            name: state.name,
+            name: webhookName,
+            displayName: state.displayName,
             url: state.url,
           },
-          updateMask: ["name", "url"],
+          updateMask: ["display_name", "url"],
         });
       }
 
@@ -102,7 +112,7 @@ const CreateWebhookDialog: React.FC<Props> = (props: Props) => {
           <XIcon className="w-5 h-auto" />
         </Button>
       </div>
-      <div className="flex flex-col justify-start items-start !w-80">
+      <div className="flex flex-col justify-start items-start w-80!">
         <div className="w-full flex flex-col justify-start items-start mb-3">
           <span className="mb-2">
             {t("setting.webhook-section.create-dialog.title")} <span className="text-red-600">*</span>
@@ -112,7 +122,7 @@ const CreateWebhookDialog: React.FC<Props> = (props: Props) => {
               className="w-full"
               type="text"
               placeholder={t("setting.webhook-section.create-dialog.an-easy-to-remember-name")}
-              value={state.name}
+              value={state.displayName}
               onChange={handleTitleInputChange}
             />
           </div>
