@@ -1,6 +1,6 @@
-import { Button } from "@usememos/mui";
 import { XIcon } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { generateDialog } from "./Dialog";
 
 const MIN_SCALE = 0.5;
@@ -191,7 +191,7 @@ const PreviewImageDialog: React.FC<Props> = ({ destroy, imgUrls, initialIndex }:
 export default function showPreviewImageDialog(imgUrls: string[] | string, initialIndex?: number): void {
   generateDialog(
     {
-      className: "preview-image-dialog p-0 z-[1001]",
+      className: "preview-image-dialog p-0 z-1001",
       dialogName: "preview-image-dialog",
     },
     PreviewImageDialog,
